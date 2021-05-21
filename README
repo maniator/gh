@@ -1,0 +1,5 @@
+## Dockerized gh cli
+
+```shell
+docker run --rm serveside/gh <command>
+```
