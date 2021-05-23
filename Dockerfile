@@ -1,9 +1,7 @@
 #syntax=docker/dockerfile:1.2
 FROM alpine:3.13.5 as gh
 
-WORKDIR /
-
-RUN apk add --no-cache git libc6-compat wget rsync && \
+RUN apk add --no-cache git libc6-compat wget bash rsync && \
     wget https://github.com/cli/cli/releases/download/v1.10.3/gh_1.10.3_linux_amd64.tar.gz && \
     tar -zxvf gh_1.10.3_linux_amd64.tar.gz && \
     chmod +x gh_1.10.3_linux_amd64/bin/gh && \
@@ -12,4 +10,6 @@ RUN apk add --no-cache git libc6-compat wget rsync && \
     apk del wget rsync && \
     gh version
 
-ENTRYPOINT ["/usr/local/bin/gh"]
+WORKDIR /gh
+
+ENTRYPOINT ["cd /gh", "/usr/local/bin/gh"]

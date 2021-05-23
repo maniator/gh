@@ -1,5 +1,5 @@
 ## Dockerized gh cli
 
 ```shell
-docker run --rm serveside/gh <command>
+docker run -v ${PWD}:/gh -e GITHUB_TOKEN=$BUNDLE_GITHUB__COM -w /gh maniator/gh
 ```
