@@ -8,10 +8,6 @@ RUN apk add --no-cache wget rsync && \
     chmod +x gh_${GH_VERSION}_linux_amd64/bin/gh && \
     rsync -az --remove-source-files gh_${GH_VERSION}_linux_amd64/bin/ /usr/bin
 
-RUN ls -la /usr/bin
-RUN ls -la /bin
-RUN echo $PATH
-
 FROM alpine:3.13.5 as gh
 
 RUN apk add --no-cache git libc6-compat
