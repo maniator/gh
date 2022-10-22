@@ -1,7 +1,7 @@
 #syntax=docker/dockerfile:1.2
 FROM alpine:3.14.6 as builder
 
-ARG GH_VERSION=2.10.1
+ARG GH_VERSION=2.18.0
 RUN apk add --no-cache wget rsync && \
     wget https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz && \
     tar -zxvf gh_${GH_VERSION}_linux_amd64.tar.gz && \
