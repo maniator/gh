@@ -1,0 +1,5 @@
+#!/bin/sh -x
+
+gh release create -n '' -t '' "v$GH_VERSION"
+
+exit 0

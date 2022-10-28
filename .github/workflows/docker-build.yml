@@ -1,0 +1,80 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3.0.2
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ github.repository }}
+          tags: |
+            type=edge,enable=true,priority=700,prefix=,suffix=,branch=$repo.default_branch
+            type=schedule,pattern=latest
+            type=schedule,pattern=nightly
+            type=ref,event=branch
+            type=sha
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        if: github.event_name != 'pull_request'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - run: ./hooks/scripts/set_tags
+        id: tags
+        env:
+          GITHUB_EVENT: ${{ github.event_name }}
+
+      - name: build
+        uses: docker/bake-action@v2.1.0
+        with:
+          files: |
+            ./docker-bake.hcl
+            ./docker-bake.ci.hcl
+            ${{ steps.meta.outputs.bake-file }}
+          targets: default
+          push: ${{ github.event_name != 'pull_request' }}
+          pull: true
+        env:
+          GH_VERSION: ${{ steps.tags.outputs.gh_version }}
+          DOCKER_META_VERSION: ${{ steps.meta.outputs.version }}
+
+      - name: release
+        run: ./hooks/scripts/release
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_VERSION: ${{ steps.tags.outputs.gh_version }}

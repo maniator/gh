@@ -1,0 +1,27 @@
+#!/bin/sh -x
+
+GH_VERSION=$(curl -s 'https://api.github.com/repos/docker/buildx/releases' | jq -r '.[0].tag_name' | sed -e 's/^v//')
+DOCKER_TAG=$GH_VERSION
+
+DOCKER_LABEL=latest
+
+cat <<EOF > docker-bake.ci.hcl
+variable "DOCKER_META_VERSION" { default="" }
+
+group "default" {
+    targets = ["ci_build"]
+}
+
+target "ci_build" {
+  inherits = ["build", "docker-metadata-action"]
+  tags = [
+    "ghcr.io/serveside/gh:$DOCKER_TAG",
+    "ghcr.io/serveside/gh:$DOCKER_LABEL",
+    "ghcr.io/serveside/gh:${DOCKER_META_VERSION}",
+    "maniator/gh:$DOCKER_TAG",
+    "maniator/gh:$DOCKER_LABEL",
+  ]
+}
+EOF
+
+echo "::set-output name=gh_version::$GH_VERSION"
