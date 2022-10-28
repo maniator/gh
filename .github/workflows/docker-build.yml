@@ -1,6 +1,10 @@
 name: Build and Release
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
   push:
     branches:
       - main
@@ -49,6 +53,7 @@ jobs:
         id: tags
         env:
           GITHUB_EVENT: ${{ github.event_name }}
+          SET_VERSION: ${{ inputs.version }}
 
       - name: build
         uses: docker/bake-action@v2.1.0

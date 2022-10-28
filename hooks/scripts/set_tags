@@ -1,6 +1,8 @@
 #!/bin/sh -x
 
-GH_VERSION=$(curl -s 'https://api.github.com/repos/cli/cli/releases' | jq -r '.[0].tag_name' | sed -e 's/^v//')
+VERSION=$(curl -s 'https://api.github.com/repos/cli/cli/releases' | jq -r '.[0].tag_name' | sed -e 's/^v//')
+
+GH_VERSION=${SET_VERSION:-$VERSION}
 
 cat <<EOF > docker-bake.ci.hcl
 variable "DOCKER_META_VERSION" { default="" }
