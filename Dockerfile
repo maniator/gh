@@ -1,5 +1,5 @@
 #syntax=docker/dockerfile:1.2
-FROM alpine:3.14.6 as builder
+FROM alpine:3.15 as builder
 
 ARG GH_VERSION=2.10.1
 RUN apk add --no-cache wget rsync && \
@@ -8,7 +8,7 @@ RUN apk add --no-cache wget rsync && \
     chmod +x gh_${GH_VERSION}_linux_amd64/bin/gh && \
     rsync -az --remove-source-files gh_${GH_VERSION}_linux_amd64/bin/ /usr/bin
 
-FROM alpine:3.14.6 as gh
+FROM alpine:3.15 as gh
 
 RUN apk add --no-cache git libc6-compat
 COPY --from=builder /usr/bin/gh /usr/bin/
