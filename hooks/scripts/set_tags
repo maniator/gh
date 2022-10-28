@@ -15,9 +15,7 @@ group "default" {
 target "ci_build" {
   inherits = ["build", "docker-metadata-action"]
   tags = [
-    "ghcr.io/serveside/gh:$DOCKER_TAG",
-    "ghcr.io/serveside/gh:$DOCKER_LABEL",
-    "ghcr.io/serveside/gh:${DOCKER_META_VERSION}",
+    "maniator/gh:$DOCKER_META_VERSION",
     "maniator/gh:$DOCKER_TAG",
     "maniator/gh:$DOCKER_LABEL",
   ]
