@@ -1,9 +1,6 @@
 #!/bin/sh -x
 
-GH_VERSION=$(curl -s 'https://api.github.com/repos/docker/buildx/releases' | jq -r '.[0].tag_name' | sed -e 's/^v//')
-DOCKER_TAG=$GH_VERSION
-
-DOCKER_LABEL=latest
+GH_VERSION=$(curl -s 'https://api.github.com/repos/cli/cli/releases' | jq -r '.[0].tag_name' | sed -e 's/^v//')
 
 cat <<EOF > docker-bake.ci.hcl
 variable "DOCKER_META_VERSION" { default="" }
@@ -15,9 +12,8 @@ group "default" {
 target "ci_build" {
   inherits = ["build", "docker-metadata-action"]
   tags = [
-    "maniator/gh:$DOCKER_META_VERSION",
-    "maniator/gh:$DOCKER_TAG",
-    "maniator/gh:$DOCKER_LABEL",
+    "maniator/gh:GH_VERSION",
+    "maniator/gh:latest",
   ]
 }
 EOF
