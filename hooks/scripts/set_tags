@@ -12,7 +12,7 @@ group "default" {
 target "ci_build" {
   inherits = ["build", "docker-metadata-action"]
   tags = [
-    "maniator/gh:${GH_VERSION}",
+    "maniator/gh:v${GH_VERSION}",
     "maniator/gh:latest",
   ]
 }
