@@ -8,7 +8,7 @@ Very useful in projects using docker in their CI processes
 
 ### Github Repo
 
-https://github.com/serveside/gh
+https://github.com/maniator/gh
 
 ### Docker image tags
 
