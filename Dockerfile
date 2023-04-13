@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM alpine:3.15 as builder
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
-ARG GH_VERSION=2.10.1
+ARG GH_VERSION=2.27.0
 
 RUN export RELEASE_LOCATION="${GH_VERSION}_$(echo "${BUILDPLATFORM//\//_}")" && \
     apk add --no-cache wget rsync && \
