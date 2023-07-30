@@ -1,5 +1,5 @@
 #syntax=docker/dockerfile:1.2
-FROM --platform=$BUILDPLATFORM alpine:3.15 as builder
+FROM --platform=$BUILDPLATFORM alpine:3.16 as builder
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
@@ -12,7 +12,7 @@ RUN export RELEASE_LOCATION="${GH_VERSION}_$(echo "${BUILDPLATFORM//\//_}")" && 
     chmod +x gh_${RELEASE_LOCATION}/bin/gh && \
     rsync -az --remove-source-files gh_${RELEASE_LOCATION}/bin/ /usr/bin
 
-FROM alpine:3.15 as gh
+FROM alpine:3.16 as gh
 
 RUN apk add --no-cache git libc6-compat
 COPY --from=builder /usr/bin/gh /usr/bin/
