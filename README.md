@@ -27,3 +27,33 @@ docker run -it --rm -v ${HOME}:/root -v $(pwd):/gh -e GITHUB_TOKEN=<token> mania
 for example, if you need clone this repository, with the alias you just set, you can run it as local command
 
     gh repo clone serveside/gh
+
+### Kubernetes usage
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: containers-images
+        image: images-names:v1.0.0
+        volumeMounts:
+          - name: vc-theme
+            mountPath: /opt/themes/custom
+      initContainers:
+        - name: git
+          image: maniator/gh:latest
+          env:
+            - name: GITHUB_TOKEN
+              value: "ghp_xxxxxxxxx"
+          command: ["sh", "-c"]
+          args: ["gh auth setup-git --hostname github.com && git clone https://github.com/username/theme.git"]
+          volumeMounts:
+            - name: vc-theme
+              mountPath: /gh/theme
+      volumes:
+        - name: vc-theme
+          emptyDir: {}
+```
