@@ -20,4 +20,4 @@ target "ci_build" {
 }
 EOF
 
-echo "::set-output name=gh_version::$GH_VERSION"
+echo "gh_version=${GH_VERSION}" >> $GITHUB_OUTPUT
