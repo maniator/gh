@@ -5,7 +5,7 @@ ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 ARG GH_VERSION=2.10.1
 
-RUN export RELEASE_LOCATION="${GH_VERSION}_$(echo "${BUILDPLATFORM//\//_}")" && \
+RUN export RELEASE_LOCATION="${GH_VERSION}_$(echo "${TARGETPLATFORM//\//_}")" && \
     apk add --no-cache wget rsync && \
     wget https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${RELEASE_LOCATION}.tar.gz && \
     tar -zxvf gh_${RELEASE_LOCATION}.tar.gz && \
