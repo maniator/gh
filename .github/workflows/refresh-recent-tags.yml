@@ -1,0 +1,93 @@
+name: Refresh recent tags
+
+# Security refresh: rebuild the most recent few exact `vX.Y.Z` tags on the current
+# (patched) base, so consumers pinned to a recent version pick up base-image fixes
+# without changing their pin. Older exact tags stay frozen. This runs the build
+# directly (matrix over versions) rather than dispatching "Build and Release",
+# because workflow_dispatch from GITHUB_TOKEN would not trigger a new run.
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'   # weekly, Monday 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "How many of the most recent releases to refresh"
+        required: false
+        default: "3"
+
+permissions:
+  contents: read
+
+jobs:
+  versions:
+    name: compute recent versions
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.list.outputs.matrix }}
+    steps:
+      - id: list
+        env:
+          COUNT: ${{ github.event.inputs.count || '3' }}
+        run: |
+          # Sanitize the input to digits only so it can't inject into the jq slice.
+          n=$(printf '%s' "$COUNT" | tr -cd '0-9')
+          [ -n "$n" ] || n=3
+          matrix=$(curl -s 'https://api.github.com/repos/cli/cli/releases' \
+            | jq -c --argjson n "$n" '[ .[] | select(.prerelease == false and .draft == false) | .tag_name | sub("^v"; "") ][0:$n]')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  refresh:
+    name: refresh v${{ matrix.version }}
+    needs: versions
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJson(needs.versions.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ github.repository }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # REBUILD_EXACT forces the existing exact tag to be republished on the patched
+      # base; for the newest release this also refreshes the rolling tags.
+      - run: ./hooks/scripts/set_tags
+        id: tags
+        env:
+          GITHUB_EVENT: ${{ github.event_name }}
+          SET_VERSION: ${{ matrix.version }}
+          REBUILD_EXACT: "1"
+
+      - name: build
+        uses: docker/bake-action@v6
+        with:
+          source: .
+          files: |
+            ./docker-bake.hcl
+            ./docker-bake.ci.hcl
+            ${{ steps.meta.outputs.bake-file }}
+          targets: default
+          push: true
+          pull: true
+        env:
+          GH_VERSION: ${{ steps.tags.outputs.gh_version }}
+          DOCKER_META_VERSION: ${{ steps.meta.outputs.version }}
