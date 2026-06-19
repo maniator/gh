@@ -46,3 +46,13 @@ ${ROLLING_TAGS}
 EOF
 
 echo "gh_version=${GH_VERSION}" >> "$GITHUB_OUTPUT"
+
+# Nothing to publish when the exact tag already exists (REBUILD_EXACT unset) and
+# this isn't the newest release (no rolling tags). Signal the workflow to skip the
+# build/release rather than producing an empty tag list and a no-op push.
+if [ -z "$EXACT_TAG" ] && [ -z "$ROLLING_TAGS" ]; then
+  echo "Nothing to publish: v${GH_VERSION} already exists and REBUILD_EXACT is unset -- skipping build."
+  echo "skip=true" >> "$GITHUB_OUTPUT"
+else
+  echo "skip=false" >> "$GITHUB_OUTPUT"
+fi
