@@ -5,6 +5,10 @@ on:
     inputs:
       version:
         required: true
+      rebuild_exact:
+        description: "Force-republish the exact vX.Y.Z tag on the current patched base (security refresh of a recent release)"
+        required: false
+        default: ""
   push:
     branches:
       - main
@@ -14,10 +18,17 @@ on:
   schedule:
     - cron: '0 0 * * *'
 
+# Least privilege by default; only the release job is granted contents: write.
+permissions:
+  contents: read
+
 jobs:
   build:
     name: build
     runs-on: ubuntu-latest
+    outputs:
+      gh_version: ${{ steps.tags.outputs.gh_version }}
+      skip: ${{ steps.tags.outputs.skip }}
     steps:
       - uses: actions/checkout@v4
 
@@ -54,8 +65,10 @@ jobs:
         env:
           GITHUB_EVENT: ${{ github.event_name }}
           SET_VERSION: ${{ inputs.version }}
+          REBUILD_EXACT: ${{ inputs.rebuild_exact }}
 
       - name: build
+        if: steps.tags.outputs.skip != 'true'
         uses: docker/bake-action@v6
         with:
           source: .
@@ -70,9 +83,16 @@ jobs:
           GH_VERSION: ${{ steps.tags.outputs.gh_version }}
           DOCKER_META_VERSION: ${{ steps.meta.outputs.version }}
 
-      - name: release
-        run: ./hooks/scripts/release
-        if: github.event_name != 'pull_request'
+  release:
+    name: release
+    needs: build
+    if: github.event_name != 'pull_request' && needs.build.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./hooks/scripts/release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_VERSION: ${{ steps.tags.outputs.gh_version }}
+          GH_VERSION: ${{ needs.build.outputs.gh_version }}

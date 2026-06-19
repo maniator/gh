@@ -14,6 +14,17 @@ https://github.com/maniator/gh
 
 https://hub.docker.com/r/maniator/gh/tags/
 
+Tagging scheme:
+
+- `latest` — newest gh release on a current, security-patched base. Moves over time.
+- `v2`, `v2.95` (rolling major / major.minor) — newest patch of that line, rebuilt on a
+  patched base. Pin one of these if you want a stable gh line that still receives base-image
+  security updates.
+- `v2.95.0` (fully-qualified) — a fixed gh version. The most recent few releases are periodically
+  rebuilt on a patched base for security; older versions stay frozen exactly as first published
+  (so long-standing reproducible pins don't shift OS underneath them). If you always want the
+  newest patched build for a release line, pin a rolling tag (`v2.95` / `v2`) instead.
+
 ### Usage
 
 ```shell

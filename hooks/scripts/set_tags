@@ -1,8 +1,43 @@
 #!/bin/sh -x
 
-VERSION=$(curl -s 'https://api.github.com/repos/cli/cli/releases' | jq -r '.[0].tag_name' | sed -e 's/^v//')
+# Latest *stable* gh release (skip drafts/prereleases so rolling tags don't get
+# suppressed or moved onto a prerelease).
+VERSION=$(curl -s 'https://api.github.com/repos/cli/cli/releases' | jq -r '[ .[] | select(.prerelease == false and .draft == false) | .tag_name ][0]' | sed -e 's/^v//')
 
 GH_VERSION=${SET_VERSION:-$VERSION}
+
+# GH_VERSION is interpolated into the Docker Hub URL and the generated bake tags, so
+# reject anything that isn't a plain X.Y.Z before it can break the bake file or push
+# unexpected tags.
+if ! printf '%s' "$GH_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo "Refusing to build: GH_VERSION='$GH_VERSION' is not a valid X.Y.Z version" >&2
+  exit 1
+fi
+
+# The exact, fully-qualified `vX.Y.Z` tag is immutable by default: publish it only
+# the first time we build a given gh version. Once it exists on Docker Hub we don't
+# rebuild it, so a pin like `v2.95.0` stays byte-for-byte reproducible even though
+# the nightly job keeps refreshing the rolling tags on a freshly-patched base.
+#
+# Exception: a deliberate security refresh of recent releases. Set REBUILD_EXACT=1
+# (via workflow_dispatch) to force-republish an existing exact tag on the current
+# patched base -- used only for the most recent few releases; older tags stay frozen.
+EXACT_TAG="    \"maniator/gh:v${GH_VERSION}\","
+if [ -z "$REBUILD_EXACT" ] && curl -sfL -o /dev/null "https://hub.docker.com/v2/repositories/maniator/gh/tags/v${GH_VERSION}/"; then
+  echo "maniator/gh:v${GH_VERSION} already published -- leaving it immutable (set REBUILD_EXACT=1 to force a patched rebuild)"
+  EXACT_TAG=""
+fi
+
+# Rolling tags (`latest`, `vMAJOR`, `vMAJOR.MINOR`) always move to the newest gh
+# release on a freshly-patched base, giving version-conscious users an opt-in line
+# that keeps receiving base-image security patches. Only emitted when building the
+# newest release, so a `workflow_dispatch` of an older version never clobbers them.
+ROLLING_TAGS=""
+if [ "$GH_VERSION" = "$VERSION" ]; then
+  GH_MAJOR=$(echo "$GH_VERSION" | cut -d. -f1)
+  GH_MINOR=$(echo "$GH_VERSION" | cut -d. -f1,2)
+  ROLLING_TAGS=$(printf '    "maniator/gh:v%s",\n    "maniator/gh:v%s",\n    "maniator/gh:latest",' "$GH_MAJOR" "$GH_MINOR")
+fi
 
 cat <<EOF > docker-bake.ci.hcl
 variable "DOCKER_META_VERSION" { default="" }
@@ -14,10 +49,20 @@ group "default" {
 target "ci_build" {
   inherits = ["build", "docker-metadata-action"]
   tags = [
-    "maniator/gh:v${GH_VERSION}",
-    "maniator/gh:latest",
+${EXACT_TAG}
+${ROLLING_TAGS}
   ]
 }
 EOF
 
-echo "gh_version=${GH_VERSION}" >> $GITHUB_OUTPUT
+echo "gh_version=${GH_VERSION}" >> "$GITHUB_OUTPUT"
+
+# Nothing to publish when the exact tag already exists (REBUILD_EXACT unset) and
+# this isn't the newest release (no rolling tags). Signal the workflow to skip the
+# build/release rather than producing an empty tag list and a no-op push.
+if [ -z "$EXACT_TAG" ] && [ -z "$ROLLING_TAGS" ]; then
+  echo "Nothing to publish: v${GH_VERSION} already exists and REBUILD_EXACT is unset -- skipping build."
+  echo "skip=true" >> "$GITHUB_OUTPUT"
+else
+  echo "skip=false" >> "$GITHUB_OUTPUT"
+fi
