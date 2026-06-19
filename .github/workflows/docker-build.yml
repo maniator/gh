@@ -30,7 +30,7 @@ jobs:
       gh_version: ${{ steps.tags.outputs.gh_version }}
       skip: ${{ steps.tags.outputs.skip }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Docker meta
         id: meta
@@ -91,7 +91,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: ./hooks/scripts/release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
