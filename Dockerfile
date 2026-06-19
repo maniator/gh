@@ -19,10 +19,10 @@ RUN case "${TARGETPLATFORM:-linux/amd64}" in \
     RELEASE_LOCATION="${GH_VERSION}_${GH_ARCH}" && \
     apk upgrade --no-cache && \
     apk add --no-cache wget rsync && \
-    wget https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${RELEASE_LOCATION}.tar.gz && \
-    tar -zxvf gh_${RELEASE_LOCATION}.tar.gz && \
-    chmod +x gh_${RELEASE_LOCATION}/bin/gh && \
-    rsync -az --remove-source-files gh_${RELEASE_LOCATION}/bin/ /usr/bin
+    wget -q "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${RELEASE_LOCATION}.tar.gz" && \
+    tar -zxvf "gh_${RELEASE_LOCATION}.tar.gz" && \
+    chmod +x "gh_${RELEASE_LOCATION}/bin/gh" && \
+    rsync -az --remove-source-files "gh_${RELEASE_LOCATION}/bin/" /usr/bin
 
 FROM alpine:3.24.1 as gh
 
