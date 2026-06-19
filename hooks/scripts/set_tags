@@ -1,8 +1,18 @@
 #!/bin/sh -x
 
-VERSION=$(curl -s 'https://api.github.com/repos/cli/cli/releases' | jq -r '.[0].tag_name' | sed -e 's/^v//')
+# Latest *stable* gh release (skip drafts/prereleases so rolling tags don't get
+# suppressed or moved onto a prerelease).
+VERSION=$(curl -s 'https://api.github.com/repos/cli/cli/releases' | jq -r '[ .[] | select(.prerelease == false and .draft == false) | .tag_name ][0]' | sed -e 's/^v//')
 
 GH_VERSION=${SET_VERSION:-$VERSION}
+
+# GH_VERSION is interpolated into the Docker Hub URL and the generated bake tags, so
+# reject anything that isn't a plain X.Y.Z before it can break the bake file or push
+# unexpected tags.
+if ! printf '%s' "$GH_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo "Refusing to build: GH_VERSION='$GH_VERSION' is not a valid X.Y.Z version" >&2
+  exit 1
+fi
 
 # The exact, fully-qualified `vX.Y.Z` tag is immutable by default: publish it only
 # the first time we build a given gh version. Once it exists on Docker Hub we don't
