@@ -5,6 +5,10 @@ on:
     inputs:
       version:
         required: true
+      rebuild_exact:
+        description: "Force-republish the exact vX.Y.Z tag on the current patched base (security refresh of a recent release)"
+        required: false
+        default: ""
   push:
     branches:
       - main
@@ -13,6 +17,10 @@ on:
       - main
   schedule:
     - cron: '0 0 * * *'
+
+# `release` creates a GitHub release via GITHUB_TOKEN; Docker Hub auth uses secrets.
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -54,6 +62,7 @@ jobs:
         env:
           GITHUB_EVENT: ${{ github.event_name }}
           SET_VERSION: ${{ inputs.version }}
+          REBUILD_EXACT: ${{ inputs.rebuild_exact }}
 
       - name: build
         uses: docker/bake-action@v6

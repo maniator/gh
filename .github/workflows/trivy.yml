@@ -1,0 +1,46 @@
+name: Trivy vulnerability scan
+
+on:
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: trivy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t gh-scan:${{ github.sha }} .
+
+      # Informational: surface ALL fixable HIGH/CRITICAL findings (including the
+      # bundled gh Go binary) without failing.
+      - name: Trivy report (all package types)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: gh-scan:${{ github.sha }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '0'
+
+      # Gate: fail only on OS-package vulnerabilities -- what this image controls
+      # (the Alpine base + `apk upgrade`). CVEs inside the upstream gh binary can't
+      # be fixed here; they're resolved by bumping gh (handled by the CI version fetch).
+      - name: Trivy gate (OS packages only)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: gh-scan:${{ github.sha }}
+          format: table
+          vuln-type: os
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'

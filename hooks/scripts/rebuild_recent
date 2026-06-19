@@ -1,0 +1,23 @@
+#!/bin/sh -x
+#
+# Security refresh of the most recent N gh release tags: rebuild their exact
+# `vX.Y.Z` images on the current (patched) base, so consumers pinned to a recent
+# version pick up base-image fixes without changing their pin. Older exact tags
+# are intentionally left frozen (rebuilding e.g. v2.10.1's Alpine 3.15 onto a new
+# Alpine major risks breaking long-pinned, reproducibility-sensitive setups).
+#
+# Usage:   ./hooks/scripts/rebuild_recent [N]   (default N=3)
+# Requires: gh CLI authenticated with workflow-dispatch permission on maniator/gh.
+
+set -e
+
+N=${1:-3}
+
+gh api repos/cli/cli/releases --jq '.[] | select(.prerelease == false and .draft == false) | .tag_name' \
+  | head -n "$N" \
+  | sed 's/^v//' \
+  | while read -r v; do
+      echo "Dispatching patched rebuild of maniator/gh:v$v"
+      gh workflow run "Build and Release" -f version="$v" -f rebuild_exact=1
+      sleep 2
+    done
