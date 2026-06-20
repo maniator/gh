@@ -1,0 +1,22 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/maniator/gh/blob/main/openvex.json",
+  "author": "maniator",
+  "role": "Image maintainer",
+  "timestamp": "2026-06-19T00:00:00.000Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-15558",
+        "description": "github.com/docker/cli (Windows) searches C:\\ProgramData\\Docker\\cli-plugins for plugin binaries, allowing local privilege escalation."
+      },
+      "products": [
+        { "@id": "pkg:docker/maniator/gh" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2025-15558 is a Windows-only privilege escalation via C:\\ProgramData\\Docker\\cli-plugins, in the github.com/docker/cli module compiled into the upstream gh binary. maniator/gh publishes only linux/* images, where that path does not exist and the Windows plugin-lookup code cannot execute."
+    }
+  ]
+}
