@@ -1,70 +1,88 @@
-## Dockerized github cli
+# Dockerized GitHub CLI
 
-Simple container running in alpine Linux to run the github cli seamlessly for use anywhere
+A lightweight Alpine-based container for the upstream [GitHub CLI (`gh`)](https://cli.github.com/), useful for running GitHub operations inside CI and containerized build environments.
 
-Very useful in projects using docker in their CI processes
+[![Docker Hub](https://dockeri.co/image/maniator/gh)](https://hub.docker.com/r/maniator/gh/)
 
-[![DockerHub Badge](http://dockeri.co/image/maniator/gh)](https://hub.docker.com/r/maniator/gh/)
+- **Source:** https://github.com/maniator/gh
+- **Images and tags:** https://hub.docker.com/r/maniator/gh/tags/
+- **Security policy:** [SECURITY.md](./SECURITY.md)
+- **Downstream usage and version-pin inventory:** [downstream-usage-report.md](./downstream-usage-report.md)
 
-### Github Repo
+## Docker image tags
 
-https://github.com/maniator/gh
+The [tagging script](./hooks/scripts/set_tags) and [release workflows](./.github/workflows/docker-build.yml) define the current publication policy:
 
-### Docker image tags
+| Tag | Update behavior |
+|---|---|
+| `latest` | Current stable upstream `gh` release; rolling with successful scheduled builds. |
+| `v2` (rolling major) | Newest `gh` v2 release; intended as a rolling v2 line while upstream major v2 is current. |
+| `v2.95` (rolling major.minor) | Refreshed **only while v2.95 is the newest upstream minor line**. When `gh` moves to v2.96, the old `v2.95` line stops receiving scheduled refreshes. |
+| `v2.95.0` (exact release) | Usually left unchanged after first publication, **except** that the three newest stable exact releases are explicitly rebuilt on the patched base by a [weekly job](./.github/workflows/refresh-recent-tags.yml). Older exact tags remain frozen by default. |
+| `vX.Y.Z@sha256:...` (digest pin) | Immutable image content; requires deliberate updates to receive newer binaries or OS package fixes. |
 
-https://hub.docker.com/r/maniator/gh/tags/
+These names are **examples of the tag scheme**, not a statement that a particular release is the latest today. Check Docker Hub for currently published tags. Registry tags moving **does not** update already running containers or prevent cached image reuse: repull/redeploy when updates are desired. For security considerations see [SECURITY.md](./SECURITY.md).
 
-Tagging scheme:
+## Docker usage
 
-- `latest` — newest gh release on a current, security-patched base. Moves over time.
-- `v2`, `v2.95` (rolling major / major.minor) — newest patch of that line, rebuilt on a
-  patched base. Pin one of these if you want a stable gh line that still receives base-image
-  security updates.
-- `v2.95.0` (fully-qualified) — a fixed gh version. The most recent few releases are periodically
-  rebuilt on a patched base for security; older versions stay frozen exactly as first published
-  (so long-standing reproducible pins don't shift OS underneath them). If you always want the
-  newest patched build for a release line, pin a rolling tag (`v2.95` / `v2`) instead.
+Set a GitHub token in the local environment and pass it through to the container. `gh` recognizes `GH_TOKEN` (and `GITHUB_TOKEN`); using `-e GH_TOKEN` avoids placing its actual value in the command arguments.
 
-### Usage
-
-```shell
-docker run -it --rm -v ${HOME}:/root -v $(pwd):/gh -e GITHUB_TOKEN=<token> maniator/gh <command>
+```sh
+export GH_TOKEN="your-github-token"
+docker run --rm -it \
+  -e GH_TOKEN \
+  -v "${PWD}:/gh" \
+  maniator/gh:latest \
+  repo view maniator/gh
 ```
 
-### Optional alias:
+Only mount the work directory or configuration files the container actually needs. Mounting all of `${HOME}` to `/root` grants the container access to unrelated credentials and files.
 
-    alias gh="docker run -ti --rm -v ${HOME}:/root -v $(pwd):/gh maniator/gh"
+Optional shell alias:
 
-for example, if you need clone this repository, with the alias you just set, you can run it as local command
+```sh
+alias gh='docker run --rm -it -e GH_TOKEN -v "${PWD}:/gh" maniator/gh:latest'
 
-    gh repo clone serveside/gh
+gh repo clone maniator/gh
+```
 
-### Kubernetes usage
+The alias expects `GH_TOKEN` to be set in your environment for authenticated commands. Some operations on public repositories may work without authentication.
+
+## Kubernetes initContainer example
+
+The following example clones a repository into a shared `emptyDir` volume during pod initialization. Replace `username/theme` with the desired repository and create the Kubernetes Secret `github-credentials` with a `token` key before running this example. Prefer a narrowly scoped credential and appropriate service-account permissions.
 
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gh-clone-example
 spec:
-  template:
-    spec:
-      containers:
-      - name: containers-images
-        image: images-names:v1.0.0
-        volumeMounts:
-          - name: vc-theme
-            mountPath: /opt/themes/custom
-      initContainers:
-        - name: git
-          image: maniator/gh:latest
-          env:
-            - name: GITHUB_TOKEN
-              value: "ghp_xxxxxxxxx"
-          command: ["sh", "-c"]
-          args: ["gh auth setup-git --hostname github.com && git clone https://github.com/username/theme.git"]
-          volumeMounts:
-            - name: vc-theme
-              mountPath: /gh/theme
-      volumes:
-        - name: vc-theme
-          emptyDir: {}
+  restartPolicy: Never
+  initContainers:
+    - name: clone
+      image: maniator/gh:v2
+      command: ["gh"]
+      args: ["repo", "clone", "username/theme", "/gh/theme"]
+      env:
+        - name: GH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-credentials
+              key: token
+      volumeMounts:
+        - name: repo
+          mountPath: /gh
+  containers:
+    - name: consumer
+      image: alpine:3.24.1
+      command: ["sh", "-c", "ls -la /workspace/theme"]
+      volumeMounts:
+        - name: repo
+          mountPath: /workspace
+  volumes:
+    - name: repo
+      emptyDir: {}
 ```
+
+If reproducible deployment is critical, pin a digest and manage explicit image upgrades instead of relying on `latest` or another moving tag.
