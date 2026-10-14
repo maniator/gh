@@ -1,88 +1,103 @@
-# Downstream usage of `maniator/gh` — vulnerability exposure report
+# Downstream usage of `maniator/gh`
 
-Generated from a `gh search code "maniator/gh"` sweep of **public** GitHub repos (default branches
-only). GitHub's code-search API caps results (~100 per query / ~1000 total, rate-limited), so this
-is a **representative sample, not a complete census**. The image has ~624k Docker Hub pulls, so real
-usage is far larger than what is indexed here.
+**As of 2026-10-14.** This report inventories public *references* to the Docker image, not verified runtime executions or unique users. It supersedes the June 19, 2026 snapshot; these are not CVE-exposure or per-tag pull counts.
 
-## How exposure is fixed
+## Search coverage and totals
 
-- **`:latest` / untagged consumers** → automatically protected once the patched `latest` is published
-  (Alpine `3.24.1` + `apk upgrade`). **No action required on their side.**
-- **Consumers pinning a recent `:vX.Y.Z` tag** → the most recent few releases are **rebuilt on the
-  patched base** (a deliberate, opt-in security refresh via `REBUILD_EXACT=1`, driven by
-  `hooks/scripts/rebuild_recent`). These tags are on Alpine 3.21, so the patch is a small, low-risk
-  bump and recent pins get fixed in place with no change on the consumer's side.
-- **Consumers pinning an OLD `:vX.Y.Z` tag** → we deliberately **leave these frozen**. Silently
-  rebuilding `v2.10.1` (Alpine 3.15) onto Alpine 3.24 is a major-OS jump that could break setups
-  pinned for reproducibility (newer musl/git, different package set). Instead we publish **opt-in
-  rolling tags** — `vMAJOR` / `vMAJOR.MINOR` (e.g. `v2`, `v2.95`) — that always point at the latest
-  patched build, so anyone who wants patches can switch their pin without us rewriting frozen history.
+- A paginated [GitHub code search for `maniator/gh`](https://github.com/search?q=%22maniator%2Fgh%22&type=code) returned **161 matching indexed files in 87 distinct third-party repositories** (excluding `maniator/gh` itself). Multiple matching files in one repository are deduplicated.
+- Narrower code searches for full version names surfaced **five additional** TenantCloud repositories missing from the broad result, making **92 distinct GitHub code-search-visible repositories** in the combined sample.
+- Direct verification of [`cidx-org/cidx`'s security baseline](https://github.com/cidx-org/cidx/blob/main/SECURITY-BASELINE.md) supplied **one more, otherwise unindexed** `v2.95` reference.
+- **Total: 93 distinct public repositories mentioning the image** (87 broad + 5 targeted + 1 direct supplementary reference). This is a *discovery lower bound*, not a comprehensive census of active consumers.
 
-> Note: we deliberately do **not** open PRs against third-party consumer repos — unsolicited mass PRs
-> are out of scope. Patching `latest`/rolling tags protects consumers without touching their code.
+## Version-by-version counts
 
-## Consumers pinning OLD version tags (vulnerable until the tag is rebuilt)
+Counts are **distinct repositories** containing a specific reference on an indexed default-branch file, or the directly verified supplemental `cidx` document. A repository with multiple matching files is counted once per version. Categories in the total are mutually exclusive (explicit pin, then explicit `:latest`, then other/untagged-only), whereas individual files may contain more than one reference.
 
-| Repo | Pinned tag |
-|------|-----------|
-| myspotontheweb/argocd-springboot-demo2 | v2.29.0 |
-| Alexey-T/lexer_tests | v2.40.1 |
-| Sir-NoChill/pkl-rust | v2.40.1 |
-| gian-didom/pkl-lang-ssh | v2.40.1 |
-| kdeps/schema | v2.40.1 |
-| tenantcloud/laravel-better-cache | v2.48.0 |
-| tenantcloud/laravel-boolean-softdeletes | v2.48.0 |
-| tenantcloud/laravel-graphql-platform | v2.48.0 |
-| mock-server/mockserver-monorepo | v2.62.0 |
-| syncloud/image | v2.65.0 |
-| quartz-technology/dagger-agents | v2.68.1 |
-| aperture-sci/DevOps | v2.76.0 |
-| fx-integral/academia-archives | v2.79.0 |
-| tensorplex-labs/dojo | v2.79.0 |
-| PingCAP-QE/ci | v2.83.2 |
-| bccalegari/dev-link-iac | v2.83.2 |
-| britter/gh-get | v2.92.0 |
+| Image tag or reference | Repositories | Example |
+|---|---:|---|
+| `v2.29.0` | 1 | [myspotontheweb/argocd-springboot-demo2](https://github.com/myspotontheweb/argocd-springboot-demo2/blob/28769e4790d756d91311e7e1812e6aa733a533d4/Jenkinsfile) |
+| `v2.40.1` | 4 | [Alexey-T/lexer_tests](https://github.com/Alexey-T/lexer_tests/blob/f298f54fac6be5d4c5dea5e431c99f088a22203d/lexers/Pkl/config.pkl) |
+| `v2.48.0` | 16 | [tenantcloud/laravel-boolean-softdeletes](https://github.com/tenantcloud/laravel-boolean-softdeletes/blob/f5600395ea0755e9709ab908c51ad888589c8859/.github/workflows/template-sync.yml) |
+| `v2.62.0` | 2 | [mock-server/mockserver-monorepo](https://github.com/mock-server/mockserver-monorepo/blob/b3af0467918387a7328d2be754ffe42db945d8e3/scripts/release/_lib.sh) |
+| `v2.65.0` | 1 | [syncloud/image](https://github.com/syncloud/image/blob/c2739033db5b63c3f2f9b9a9b8de13b959a7bda8/.drone.jsonnet) |
+| `v2.68.1` | 1 | [quartz-technology/dagger-agents](https://github.com/quartz-technology/dagger-agents/blob/01fb3f9179d66b07a3567041f7c362b5b85b1050/gh-pr-agent/gh-pr-workspace/main.go) |
+| `v2.69.0` | 1 | [Viasat/vionix](https://github.com/Viasat/vionix/blob/75c430a4a25f73583d40bb9e6815d0e963c7fc93/.github/workflows/github-ghas-dependabot-reviews.yaml) |
+| `v2.79.0` | 2 | [tensorplex-labs/dojo](https://github.com/tensorplex-labs/dojo/blob/283d03955a2069a00ddd078897d6e52605b32695/.github/workflows/release.yaml) |
+| `v2.83.2` | 1 | [bccalegari/dev-link-iac](https://github.com/bccalegari/dev-link-iac/blob/c7a634e0723b6971e945fbadd1d4ce51024d3a7a/infra/jenkins/jenkins.yaml) |
+| `v2.100.0` | 1 | [PingCAP-QE/ci](https://github.com/PingCAP-QE/ci/blob/47d818cb0b9701684687b2854abeadf51f9e980c/prow-jobs/pingcap/tidb-operator/latest-presubmits.yaml) |
+| `v2.102.0` | 1 | [britter/gh-get](https://github.com/britter/gh-get/blob/7e55529b6b339bcf4f8f50480ce199aed548b99d/integration-tests/Dockerfile) |
+| `v2.95` (supplemental) | 1 | [cidx-org/cidx](https://github.com/cidx-org/cidx/blob/main/SECURITY-BASELINE.md) |
+| `:latest` | 10 | [shanearcaro/automatic-labeler](https://github.com/shanearcaro/automatic-labeler/blob/ad4c86fd25d51b4e1ebbc7bc4897675d8c527ccc/Dockerfile) |
+| Untagged / other reference only | 51 | [ArkaZhuo/compactionrl-agent-rl](https://github.com/ArkaZhuo/compactionrl-agent-rl/blob/2f5160e0e99f9dcb85547e12962da8acc4032e5e/swe-rl/AvaTrain/Megatron-LM/.gitlab/stages/05.publish.yml) |
+| **Unique repositories** | **93** | **92 GitHub code search + 1 supplemental** |
 
-**Distinct old tags to rebuild on the patched base:**
-`v2.29.0 v2.40.1 v2.48.0 v2.62.0 v2.65.0 v2.68.1 v2.76.0 v2.79.0 v2.83.2 v2.92.0`
-(plus `v2.10.1`, the prior Dockerfile default).
+## Which repositories use which references
 
-## Tag pull-recency (Docker Hub `tag_last_pulled`)
+**`v2.29.0` (1):** [myspotontheweb/argocd-springboot-demo2](https://github.com/myspotontheweb/argocd-springboot-demo2/blob/28769e4790d756d91311e7e1812e6aa733a533d4/Jenkinsfile)
 
-Docker Hub's public tags API exposes a `tag_last_pulled` timestamp per tag (but **not** a per-tag
-pull *count* — only the repo-wide total of ~624k). Pulling that data for the rebuild-candidate tags:
+**`v2.40.1` (4):** [Alexey-T/lexer_tests](https://github.com/Alexey-T/lexer_tests/blob/f298f54fac6be5d4c5dea5e431c99f088a22203d/lexers/Pkl/config.pkl) · [Sir-NoChill/pkl-rust](https://github.com/Sir-NoChill/pkl-rust/blob/9d7e90db3476ed7c97e938c8033e2f4eca43cf91/.circleci/config.pkl) · [gian-didom/pkl-lang-ssh](https://github.com/gian-didom/pkl-lang-ssh/blob/5f1b942144e05a989cfeea8a8738a50b6c073951/.circleci/config.pkl) · [kdeps/schema](https://github.com/kdeps/schema/blob/1177dc2088a60364c37090ad258f825f68cf98fb/assets/external/pkl-pantry/packages/pkl.csv/Config.pkl)
 
-| Tag | Last pulled | Last pushed | Note |
-|-----|-------------|-------------|------|
-| v2.10.1 | 2026-06-19 | 2022-10-28 | still pulled today, 3.5 yrs after push |
-| v2.29.0 | — | — | **not published to the registry** — downstream pin is already broken |
-| v2.40.1 | 2026-06-19 | 2024-01-08 | active |
-| v2.48.0 | 2026-06-19 | 2024-04-30 | most-recently-pulled tag in the whole repo |
-| v2.62.0 | 2026-06-19 | 2024-11-27 | active |
-| v2.65.0 | 2026-06-19 | 2025-01-29 | active |
-| v2.68.1 | 2026-06-19 | 2025-03-19 | active |
-| v2.76.0 | 2026-06-19 | 2025-07-23 | active |
-| v2.79.0 | 2026-06-19 | 2025-09-23 | active |
-| v2.83.2 | 2026-06-19 | 2026-01-14 | active |
-| v2.92.0 | 2026-06-19 | 2026-05-27 | active |
+**`v2.48.0` (16):** [tenantcloud/laravel-boolean-softdeletes](https://github.com/tenantcloud/laravel-boolean-softdeletes/blob/f5600395ea0755e9709ab908c51ad888589c8859/.github/workflows/template-sync.yml) · [tenantcloud/laravel-better-cache](https://github.com/tenantcloud/laravel-better-cache/blob/d4e7a67bfaa8b8f4e45e7e57a11d453a83db21f4/.github/workflows/template-sync.yml) · [tenantcloud/laravel-command-logger](https://github.com/tenantcloud/laravel-command-logger/blob/a70f1dcba61d650c491ac7fc458f202ca9c0ef7f/.github/workflows/template-sync.yml) · [tenantcloud/php-data-transfer-objects](https://github.com/tenantcloud/php-data-transfer-objects/blob/HEAD/.github/workflows/template-sync.yml) · [tenantcloud/php-rentler-sdk](https://github.com/tenantcloud/php-rentler-sdk/blob/HEAD/.github/workflows/template-sync.yml) · [tenantcloud/laravel-cors](https://github.com/tenantcloud/laravel-cors/blob/HEAD/.github/workflows/template-sync.yml) · [tenantcloud/php-emailer-sdk](https://github.com/tenantcloud/php-emailer-sdk/blob/HEAD/.github/workflows/template-sync.yml) · [tenantcloud/php-standard](https://github.com/tenantcloud/php-standard/blob/214c8a36415629baa7e3bc7e82bd0d93a0b40369/.github/workflows/template-sync.yml) · [tenantcloud/laravel-json-api](https://github.com/tenantcloud/laravel-json-api/blob/70cc4a77aa72bc9ec0b263b823fe1700eeae96bd/.github/workflows/template-sync.yml) · [tenantcloud/laravel-mixins](https://github.com/tenantcloud/laravel-mixins/blob/3eab1afb03fc38cd829161ad00b5e32553cd1dc1/.github/workflows/template-sync.yml) · [tenantcloud/php-guzzle-helper](https://github.com/tenantcloud/php-guzzle-helper/blob/2a9a9c2ab4f7bd4a6996e0e08a6ed286d18dac1c/.github/workflows/template-sync.yml) · [tenantcloud/laravel-graphql-platform](https://github.com/tenantcloud/laravel-graphql-platform/blob/89955f4522433624cdd6445e287a28fb30fc3a75/.github/workflows/template-sync.yml) · [tenantcloud/laravel-api-versioning](https://github.com/tenantcloud/laravel-api-versioning/blob/HEAD/.github/workflows/template-sync.yml) · [tenantcloud/php-tenant-turner-sdk](https://github.com/tenantcloud/php-tenant-turner-sdk/blob/6d31880ca52abb51b79a12adfb80d5f05ecb7840/.github/workflows/template-sync.yml) · [tenantcloud/php-cs-fixer-rule-sets](https://github.com/tenantcloud/php-cs-fixer-rule-sets/blob/9f15fdcaa3e281edb29e0878f897001d68091418/.github/workflows/template-sync.yml) · [tenantcloud/laravel-restrict-commands](https://github.com/tenantcloud/laravel-restrict-commands/blob/2ccba37256742a6528118c6cc68564f6609aa857/.github/workflows/template-sync.yml)
 
-**Finding:** across all 96 published tags, virtually every historical tag was pulled within the last
-day — old pins are genuinely live, so the exposure is real. The fix is tiered: the most recent few
-exact tags get an in-place **patched rebuild** (low-risk, they're on Alpine 3.21); the patched
-`latest`/`v2`/`v2.95` rolling lines move forward for everyone else; and old exact pins stay **frozen**
-as their authors intended. (Caveat: `tag_last_pulled` counts any pull — CI, scanners, registry
-mirrors, our own tests — so it proves "still in use" but can't rank tags by volume.)
+**`v2.62.0` (2):** [mock-server/mockserver-monorepo](https://github.com/mock-server/mockserver-monorepo/blob/b3af0467918387a7328d2be754ffe42db945d8e3/scripts/release/_lib.sh) · [Cliftonz/k8-cuelang-template](https://github.com/Cliftonz/k8-cuelang-template/blob/4a70330942197ceac8a4abeb7370f6ad6e2042af/composites/home/argoevents.cue)
 
-## Consumers on `:latest` or untagged (auto-fixed, no action needed)
+**`v2.65.0` (1):** [syncloud/image](https://github.com/syncloud/image/blob/c2739033db5b63c3f2f9b9a9b8de13b959a7bda8/.drone.jsonnet)
 
-4min/resume · CircleCI-Public/circleci-server-monitoring-reference ·
-CircleCI-Public/container-runner-helm-chart · ClawGym/ClawGym-Agents · DursunKm/docker-dev-tools ·
-InnovatorLM/Innovator-VL · Jackie2049/prefix-0501 · JoyboySol/Megatron-LM · MansonBruv/capstone ·
-Miya-315/7608_LLM · NVIDIA/Megatron-LM · PingCAP-QE/ci · Sphere-AI-Lab/pion · aperture-sci/DevOps ·
-buegelbeatz/tsp-quantum · containifyci/engine-ci · dumasd/config-ops · dylanyunlon/Neuron_SP ·
-fhdsl/capstone-sandbox · geekittime/evoclaw · hotosm/docs ·
-kubiya-solutions-engineering/developer-onboarding · kubiya-solutions-engineering/hackathon-tools ·
-kubiyabot/community-tools · minvws/nl-rdo-woo-web · mock-server/mockserver-monorepo ·
-mohsen-deriv/action-create-pull-request-another-repo · shanearcaro/automatic-labeler ·
-shushuzn/workspace · zhejianglab/Gengram
+**`v2.68.1` (1):** [quartz-technology/dagger-agents](https://github.com/quartz-technology/dagger-agents/blob/01fb3f9179d66b07a3567041f7c362b5b85b1050/gh-pr-agent/gh-pr-workspace/main.go)
+
+**`v2.69.0` (1):** [Viasat/vionix](https://github.com/Viasat/vionix/blob/75c430a4a25f73583d40bb9e6815d0e963c7fc93/.github/workflows/github-ghas-dependabot-reviews.yaml)
+
+**`v2.79.0` (2):** [tensorplex-labs/dojo](https://github.com/tensorplex-labs/dojo/blob/283d03955a2069a00ddd078897d6e52605b32695/.github/workflows/release.yaml) · [fx-integral/academia-archives](https://github.com/fx-integral/academia-archives/blob/8e5dc82591d9bc522f2f82557df6991339202152/repos/tensorplex-labs__dojo/.github/workflows/release.yaml)
+
+**`v2.83.2` (1):** [bccalegari/dev-link-iac](https://github.com/bccalegari/dev-link-iac/blob/c7a634e0723b6971e945fbadd1d4ce51024d3a7a/infra/jenkins/jenkins.yaml)
+
+**`v2.100.0` (1):** [PingCAP-QE/ci](https://github.com/PingCAP-QE/ci/blob/47d818cb0b9701684687b2854abeadf51f9e980c/prow-jobs/pingcap/tidb-operator/latest-presubmits.yaml)
+
+**`v2.102.0` (1):** [britter/gh-get](https://github.com/britter/gh-get/blob/7e55529b6b339bcf4f8f50480ce199aed548b99d/integration-tests/Dockerfile)
+
+**`v2.95` (supplement):** [cidx-org/cidx, security image inventory](https://github.com/cidx-org/cidx/blob/main/SECURITY-BASELINE.md) (tag and digest recorded; not verified runtime deployment).
+
+**Explicit `:latest` (10):** [CircleCI-Public/circleci-server-monitoring-reference](https://github.com/CircleCI-Public/circleci-server-monitoring-reference/blob/28a3cba91899fc7b44d18fc73d7d9f8d8bdb49a6/.circleci/config.yml) · [CircleCI-Public/container-runner-helm-chart](https://github.com/CircleCI-Public/container-runner-helm-chart/blob/15ce8fa01050e74d134e0f6833119c0453206515/.circleci/config.yml) · [buegelbeatz/tsp-quantum](https://github.com/buegelbeatz/tsp-quantum/blob/d70c1b13ea1b7c328f3f7cc02abf96b3436acac0/.github/skills/shared/shell/scripts/metadata/tools.csv) · [dumasd/config-ops](https://github.com/dumasd/config-ops/blob/5406345823877d3367bba1a0f36eb1b512085b65/Jenkinsfile) · [kubiya-solutions-engineering/developer-onboarding](https://github.com/kubiya-solutions-engineering/developer-onboarding/blob/de00f967a918453a75cb2bc9bcecce151e8e4161/onboarding_tools/tools/base.py) · [kubiya-solutions-engineering/hackathon-tools](https://github.com/kubiya-solutions-engineering/hackathon-tools/blob/3efe214c8d02deafbfea38fcd17c7f5927fa1111/github/github_tools/tools/base.py) · [kubiyabot/community-tools](https://github.com/kubiyabot/community-tools/blob/c00126b84ecc29cdaaa070791f51a193e89722a6/github/github_tools/tools/base.py) · [shanearcaro/automatic-labeler](https://github.com/shanearcaro/automatic-labeler/blob/ad4c86fd25d51b4e1ebbc7bc4897675d8c527ccc/Dockerfile) · [thedannymarsh/merge-workflow-dummy](https://github.com/thedannymarsh/merge-workflow-dummy/blob/9865666c1c0f556f3ad55d9cff3a732b5bf8694d/.gitlab-ci.yml) · [wmglab-duke/pyfibers](https://github.com/wmglab-duke/pyfibers/blob/7e595964bd569ffdcae01a85b2d139a707a47bba/.gitlab-ci.yml).
+
+**Other/untagged references (51):** [ArkaZhuo/compactionrl-agent-rl](https://github.com/ArkaZhuo/compactionrl-agent-rl/blob/2f5160e0e99f9dcb85547e12962da8acc4032e5e/swe-rl/AvaTrain/Megatron-LM/.gitlab/stages/05.publish.yml) · [BirgerMoell/NVIDIA-Megatron-LM-context-extension](https://github.com/BirgerMoell/NVIDIA-Megatron-LM-context-extension/blob/d3ee058092f66045286f0c0bc8d6ce4f21d5302c/.gitlab/stages/05.publish.yml) · [BochunZhang/Megatron-LM-Scale-Down](https://github.com/BochunZhang/Megatron-LM-Scale-Down/blob/5be9626709af2722333bf54797c954c09edeada3/.gitlab/stages/05.publish.yml) · [ClawGym/ClawGym-Agents](https://github.com/ClawGym/ClawGym-Agents/blob/0e8526d8f5e0999896c74cee4d6b998fb8a0429e/RL/Megatron-LM/.gitlab/stages/05.publish.yml) · [FranBe/Making_science_reproducible_project](https://github.com/FranBe/Making_science_reproducible_project/blob/ddd44fbc2dc7346fb661dca5a50e67dd9fbb5b5c/.github/workflows/secret_assignment_eval.yml) · [HBinLi/HERO_My](https://github.com/HBinLi/HERO_My/blob/df782cd8410c2e01c17667b7b1199a573f4c72d9/framework/Megatron-LM/.gitlab/stages/05.publish.yml) · [HannanJaved/megatron-tokenizer](https://github.com/HannanJaved/megatron-tokenizer/blob/6513dc980da20e88bb848cabf05c722bab83e7a3/Megatron-LM/.gitlab/stages/05.publish.yml) · [Heinz217/PreMidTrainVL-Qwen3Dense](https://github.com/Heinz217/PreMidTrainVL-Qwen3Dense/blob/ea051e2110e409285b1a5d676d467fdcfb2aaec2/Megatron-LM/.gitlab/stages/00.pre.yml) · [InnovatorLM/Innovator-VL](https://github.com/InnovatorLM/Innovator-VL/blob/a48ccbfa34702f329504fbfc6310328d143a3a2d/Megatron-LM/.gitlab/stages/00.pre.yml) · [Jackie2049/PrefixSharing](https://github.com/Jackie2049/PrefixSharing/blob/c46b75dc083156b1341fc775a254791a8d3d2997/dependency/Megatron-LM-core_v0.16.1/.gitlab/stages/05.publish.yml) · [JoyboySol/Megatron-LM](https://github.com/JoyboySol/Megatron-LM/blob/e8f4b894d24c9849f5635c06999cc286c5ee3e3f/.gitlab/stages/00.pre.yml) · [JoyboySol/Megatron-SFT](https://github.com/JoyboySol/Megatron-SFT/blob/5bb81e87374a5477d979257676138db36bf30e42/Megatron-LM/.gitlab/stages/00.pre.yml) · [JoyboySol/YuLan-SFT](https://github.com/JoyboySol/YuLan-SFT/blob/693572d319ce7d1bf2b199c25eff97587decff85/.gitlab/stages/05.publish.yml) · [MansonBruv/capstone](https://github.com/MansonBruv/capstone/blob/e6de02c52878aee971c396d64b8b8a77575eb3f8/.github/workflows/GitHub_Action_Assignment.yml) · [Miya-315/7608_LLM](https://github.com/Miya-315/7608_LLM/blob/0e1d147311bd65fb5922c173bcb2bf0a8cd65f42/0128/Megatron-LM/.gitlab/stages/05.publish.yml) · [MuyeHuang/DuplexOmni](https://github.com/MuyeHuang/DuplexOmni/blob/33bfba1a821b09c5aa66790944f9098584979d34/training_framework/Megatron-LM-core_v0.15.0/.gitlab/stages/00.pre.yml) · [NVIDIA/Megatron-LM](https://github.com/NVIDIA/Megatron-LM/blob/07046cc6b8b7479ba05e6b47ed25f3f8e6634573/.gitlab/stages/05.publish.yml) · [ONSdigital/aws-uploader](https://github.com/ONSdigital/aws-uploader/blob/1689ed81cb361b4ff5cdb2d11dda293f60954f46/ci/tasks/github-pr/task.yml) · [Sphere-AI-Lab/pion](https://github.com/Sphere-AI-Lab/pion/blob/86785257979e5d6daab4a747faf0901e89c92b04/megatron-lm/.gitlab/stages/05.publish.yml) · [TangZhe96/OptiCo](https://github.com/TangZhe96/OptiCo/blob/9d7a2eeae450c2945fd4701894b8a04b10841ae6/nhmegatron/Megatron-LM/V5000/core_r0_15_0/.gitlab/stages/00.pre.yml) · [YYKKWW/SSO_test](https://github.com/YYKKWW/SSO_test/blob/d48cfc1da011cce68e94b2552ed095e62eac2df3/Megatron-LM/.gitlab/stages/05.publish.yml) · [ZhangFanYi/ZhangFanYi.github.io](https://github.com/ZhangFanYi/ZhangFanYi.github.io/blob/864e03d39b27a8bdececbf95e38b409c41c85d07/大模型训练与推理优化/01-deepseek-v3-671b-线性度验证/code/Megatron-LM/.gitlab/stages/00.pre.yml) · [Zhongxieye/OpenClaw-RL](https://github.com/Zhongxieye/OpenClaw-RL/blob/fe8654fbe83f836c602a0e987f5ce763a711959a/Megatron-LM/.gitlab/stages/05.publish.yml) · [Zhou-jiecheng/Belayer](https://github.com/Zhou-jiecheng/Belayer/blob/9102256a10741f74727b3e9e6e5826a11295a72c/Megatron-LM/.gitlab/stages/05.publish.yml) · [btarun13/capstone_sand](https://github.com/btarun13/capstone_sand/blob/9e2f1108b1d2d320aa0054878c1e7fa875af2e6a/.github/workflows/secret_assignment_eval.yml) · [cansavvy/capstone-sandbox](https://github.com/cansavvy/capstone-sandbox/blob/c49517de9a6a607c502bdfea511640a9f1e7b28a/.github/workflows/gha_assignment_eval.yml) · [carriewright11/capstone](https://github.com/carriewright11/capstone/blob/07fae9b47af745370df89499024c605232c96d50/.github/workflows/gha_assignment_eval.yml) · [containifyci/engine-ci](https://github.com/containifyci/engine-ci/blob/ed0ec339d892d006221948615e0c91635605fce8/pkg/github/gh.go) · [cuhk-parser/PARSER](https://github.com/cuhk-parser/PARSER/blob/22395c987d293f1d6ec636026b0f43b2bf868d11/train/Megatron-LM/.gitlab/stages/05.publish.yml) · [damianoamatruda/ethz-large-scale-ai-engineering-autumn-2025](https://github.com/damianoamatruda/ethz-large-scale-ai-engineering-autumn-2025/blob/6999fe2dd82467247e8da3215167e1566638e76c/.gitlab/stages/05.publish.yml) · [datologyai/Megatron-LM-zephon](https://github.com/datologyai/Megatron-LM-zephon/blob/dac06fad31b1e86eed87b4da289e206a43fd7dba/.gitlab/stages/05.publish.yml) · [dylanyunlon/Neuron_SP](https://github.com/dylanyunlon/Neuron_SP/blob/8a5ae9511365a4a0de7860819e1fe551b9740c8f/Megatron-LM/.gitlab/stages/05.publish.yml) · [fhdsl/capstone-sandbox](https://github.com/fhdsl/capstone-sandbox/blob/f6fe50460b52ff53a613c565a6d01d0ff778b284/.github/workflows/secret_assignment_eval.yml) · [fominfo/resume](https://github.com/fominfo/resume/blob/1950efe6bdf7f77cea5e10af42c958c175424276/cloudbuild.yaml) · [geekittime/evoclaw](https://github.com/geekittime/evoclaw/blob/ddf4401d34f3d7381e6e79b96e578f0de1e3b656/OpenClaw-RL/Megatron-LM/.gitlab/stages/05.publish.yml) · [gosh-sh/bridge](https://github.com/gosh-sh/bridge/blob/b067277238253fa62d0b6eb93fb2768fafa3afbc/.woodpecker/release.yaml) · [hotosm/docs](https://github.com/hotosm/docs/blob/26ec1692196dce7741a290ba9bb58033bb61e829/docs/dev-practices.md) · [kweav/capstone-sandbox-KI](https://github.com/kweav/capstone-sandbox-KI/blob/89145448ba56526703ec5b11c15db34c9d0e1d6e/.github/workflows/gha_assignment_eval.yml) · [kweav/reproducibility-capstone-sandbox-KI](https://github.com/kweav/reproducibility-capstone-sandbox-KI/blob/a71e45525366ea16cebc92a5a13029d1c9686a81/.github/workflows/gha_assignment_eval.yml) · [mohsen-deriv/action-create-pull-request-another-repo](https://github.com/mohsen-deriv/action-create-pull-request-another-repo/blob/e06bfb57b2d1649909cee2092f4987fedd41e81d/Dockerfile) · [obigriffith/obigriffith-capstone-sandbox](https://github.com/obigriffith/obigriffith-capstone-sandbox/blob/9360206f59803d72b8144fb6b6d5f43de94fd4f5/.github/workflows/secret_assignment_eval.yml) · [one2piece2hello/faibench_Frontier_InfraBench](https://github.com/one2piece2hello/faibench_Frontier_InfraBench/blob/21d595999bf3d232d188a2f98c20a7be9ff81593/tasks/kfc/wro-megatron-moe-routing-map-pad-loop1/task/environment/repo/.gitlab/stages/05.publish.yml) · [roosseetch/real-one-portfolio](https://github.com/roosseetch/real-one-portfolio/blob/08c63664c2cbe6227495166e09c796066668261a/scripts/check-workflow-config.ts) · [shushuzn/OpenClaw-RL](https://github.com/shushuzn/OpenClaw-RL/blob/61bd2e64fbc5e4969fd26ee2da5d1313e2bbced1/Megatron-LM/.gitlab/stages/05.publish.yml) · [shushuzn/workspace](https://github.com/shushuzn/workspace/blob/e1ce0f08f88aa87a13246a72c76e16b57ab5f781/80-PROJECTS/rl-trading/Megatron-LM/.gitlab/stages/05.publish.yml) · [sunyanguomt/telechat_train](https://github.com/sunyanguomt/telechat_train/blob/4e5aa72a01109e6f4d21023a4d24ac39dbd6986c/Megatron-LM/.gitlab/stages/00.pre.yml) · [weidezhang/megatron_study](https://github.com/weidezhang/megatron_study/blob/ebabbc09f247dd992c5890ecef68d828f63ad472/.gitlab/stages/05.publish.yml) · [xinqi1003/LLMCC-service-](https://github.com/xinqi1003/LLMCC-service-/blob/b8b2e63ed90cc77c7c74e888ba2e9799dfa0d733/.gitlab/stages/05.publish.yml) · [xuOAO/pipeline-scheduler](https://github.com/xuOAO/pipeline-scheduler/blob/5b1f94212fac10e05e8e73a947d55490473f7a99/.gitlab/stages/05.publish.yml) · [zgcagi/ZGCM-1](https://github.com/zgcagi/ZGCM-1/blob/77033db9eb5db306316568c10bc26c863134e6e7/sft/.gitlab/stages/05.publish.yml) · [zhejianglab/Gengram](https://github.com/zhejianglab/Gengram/blob/32419704b8706f6ea1b7caf7eafd06eddc5f2111/.gitlab/stages/05.publish.yml).
+
+Many untagged cases come from copied or vendored NVIDIA Megatron-LM `.gitlab` workflow files, and some are documentation, test fixtures, or scripts. **These may not represent independently active deployments.** Some repositories have additional generic mentions besides a specific pin; an explicit pin takes priority in the mutually exclusive summary above.
+
+## Downstream reach and popularity
+
+**Every one of the 93 repository references** now has an individually queried GitHub stars/forks/last-push record in the [complete popularity and activity appendix](./downstream-repository-popularity-2026-10-14.md) (snapshot 2026-10-14). Of these, **51** had zero stars, **24** had 1–9 stars, **13** had 10–99 stars, and **5** had 100 or more. **71 of 93** repositories were pushed to on or after 2025-10-14, which does not establish that their container references have run recently. The appendix includes the detailed 93-row table, methodology and limitations.
+
+The selected examples below provide context. GitHub star/fork counts are **project popularity signals, not `maniator/gh` pulls, deployments, or unique users**:
+
+| Repository | Stars | Forks | Image reference |
+|---|---:|---:|---|
+| [NVIDIA/Megatron-LM](https://github.com/NVIDIA/Megatron-LM) | 18,151 | 4,626 | Untagged in CI config |
+| [mock-server/mockserver-monorepo](https://github.com/mock-server/mockserver-monorepo) | 4,989 | 1,116 | `v2.62.0` in release tooling |
+| [ClawGym/ClawGym-Agents](https://github.com/ClawGym/ClawGym-Agents) | 44 | 3 | Vendored Megatron CI |
+| [Sphere-AI-Lab/pion](https://github.com/Sphere-AI-Lab/pion) | 40 | 2 | Megatron-derived CI |
+| [PingCAP-QE/ci](https://github.com/PingCAP-QE/ci) | 20 | 117 | `v2.100.0` |
+| [CircleCI-Public/container-runner-helm-chart](https://github.com/CircleCI-Public/container-runner-helm-chart) | 11 | 14 | `:latest` in CI |
+
+## Outside-GitHub discovery
+
+- [Docker Hub](https://hub.docker.com/r/maniator/gh) lists **500K+ cumulative, rounded pulls** for the image repository; it does not disclose per-tag pulls or identities of pullers. CI/scanners/mirrors can inflate this relative to distinct users.
+- The independent [market.dev directory](https://explore.market.dev/ecosystems/docker/projects/gh) lists the image; it is an aggregator, **not another downstream consumer**. Its own reported download numbers do not override Docker Hub's.
+- [HOTOSM's development practices documentation](https://docs.hotosm.org/dev-practices/) contains a practical `maniator/gh` container recipe used for GitHub issue labeling. This is **independent, off-GitHub documentation of a workflow**, stronger evidence of intended use than an index listing. The associated [GitHub repository](https://github.com/hotosm/docs) is already in the 93-repository count: **do not count it twice**.
+- A [2022 Stack Overflow answer](https://stackoverflow.com/questions/69468265/is-there-a-docker-image-with-github-cli-preinstalled) by an account named **Naftali** links to the image. The author's relationship to this project has not been independently established by the source; **do not count it as verified independent third-party adoption**, or proof of a production deployment.
+- A [May 2021 GitHub CLI community discussion](https://github.com/cli/cli/discussions/3698) announced the project, and a later commenter describes using it for Kubernetes init-container manifests. This is **qualitative firsthand use evidence** but does not measure installations.
+- **Stale outside-the-repository docs:** the current [Docker Hub overview](https://hub.docker.com/r/maniator/gh) still shows an old `serveside/gh` clone target and examples that inline `GITHUB_TOKEN=<token>` and mount the entire user's home directory; the [market.dev copy](https://explore.market.dev/ecosystems/docker/projects/gh) reproduces outdated README material. Updating the GitHub README does not automatically prove those pages are refreshed. Recheck Docker Hub's overview after merging and update it separately if the description is manually maintained.
+- Web searches for the exact image name scoped to **GitLab**, **Bitbucket**, **PyPI**, **npm**, **crates.io**, and independent developer documentation produced **no separately verified code/package consumer hosted outside GitHub**. These are **negative discovery results, not proof of absence**. GitLab-format CI files *within* GitHub repositories are not themselves GitLab-hosted repositories.
+- The [cidx-org/cidx security baseline](https://github.com/cidx-org/cidx/blob/main/SECURITY-BASELINE.md) is an extra web-discovered documented pin omitted from GitHub code search.
+
+## Change since the earlier report
+
+The June report listed **17 older exact-pin repository/tag rows** and **30 latest/untagged names**. As of this audit, upstream GitHub CLI's [latest stable release](https://github.com/cli/cli/releases/tag/v2.102.0) was **v2.102.0** (released 2026-09-30): **29 of 31** fully-qualified publicly indexed exact-version references were older than **v2.100.0**, or **30 of 32** if the supplemental `v2.95` documentation reference is included. This is a **source-file age observation**, not proof of vulnerable deployed binaries or image runtime usage. This October snapshot contains **31 distinct repositories with fully qualified indexed version pins**, **one directly verified `v2.95` pin**, **10 explicit `:latest` repositories**, and **51 other/untagged-only indexed references**. An expanded query strategy, indexing differences, changed configuration, and newly indexed repositories mean these numbers **are not a comparable growth rate**. For example, old `v2.92.0`/`v2.76.0` pins did not surface in the fresh targeted search, while `v2.100.0` and `v2.102.0` did; absence is not proof of non-use.
+
+## Reproduction and limitations
+
+1. On a future audit date, page `GET /search/code?q=maniator%2Fgh&per_page=100&page=N`; the October 14 retrieval used pages 1–2 (100/page) around **18:29–18:33 UTC**, returning `total_count: 161` and `incomplete_results: false`. Group by `repository.full_name`, excluding the source repository, to avoid counting 42 source files in `kdeps/schema` as 42 users. This is only GitHub's *indexed public default-branch files* and subject to result caps, ranking, and indexing delay.
+2. Run narrow searches such as [`maniator/gh:v2.48.0`](https://github.com/search?q=%22maniator%2Fgh%3Av2.48.0%22&type=code) for each tag. The broad query missed five repositories found this way. Record pins as observed; distinguish literal `:latest` from untagged image names.
+3. Search independent web results and public registry metadata, recording supplemental discoveries separately. The October 14 web recheck ran through approximately **18:38 UTC** and included `"maniator/gh" Docker Hub`, `"maniator/gh" -site:github.com -site:hub.docker.com`, `"maniator/gh" site:gitlab.com`, `"maniator/gh" site:bitbucket.org`, `site:docs.hotosm.org "maniator/gh"`, and similarly scoped `site:pypi.org`, `site:npmjs.com`, `site:crates.io` queries. This run checked direct source-file evidence for the extra `cidx` reference.
+4. **Unobserved:** private repositories, older non-default branches, some forks and vendored files, SHA-only or registry-mirrored references, unindexed/renamed/deleted files, and actual container deployment or per-tag pull telemetry. Stars/forks and aggregate pulls cannot establish exposure or active version-specific usage.
+
+**Security interpretation:** `latest`/rolling images can receive fixes when rebuilt and subsequently repulled by users; an already running image does **not** self-update. Older exact `vX.Y.Z` tags usually remain frozen; the [weekly refresh workflow](./.github/workflows/refresh-recent-tags.yml) deliberately rebuilds the newest three exact releases. A `vMAJOR.MINOR` tag only receives refreshes while that minor line is the *newest upstream minor*. This report is not a fresh CVE scan; see [SECURITY.md](./SECURITY.md).
