@@ -1,5 +1,5 @@
 #syntax=docker/dockerfile:1.2
-FROM --platform=$BUILDPLATFORM alpine:3.24.1 as builder
+FROM --platform=$BUILDPLATFORM alpine:3.24.2 as builder
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
@@ -24,7 +24,7 @@ RUN case "${TARGETPLATFORM:-linux/amd64}" in \
     chmod +x "gh_${RELEASE_LOCATION}/bin/gh" && \
     rsync -az --remove-source-files "gh_${RELEASE_LOCATION}/bin/" /usr/bin
 
-FROM alpine:3.24.1 as gh
+FROM alpine:3.24.2 as gh
 
 RUN apk upgrade --no-cache && apk add --no-cache git libc6-compat
 COPY --from=builder /usr/bin/gh /usr/bin/
