@@ -20,12 +20,21 @@ These statements reflect the workflows and scripts in this repository, reviewed 
 
 ## Historical assessed findings (not a fresh vulnerability scan)
 
-The following were assessed on **2026-06-19**. Their current status **has not been revalidated as part of the 2026-10-14 documentation audit**; use recent Trivy output, upstream advisories, Alpine security notices, and the image digest under investigation before drawing current vulnerability conclusions.
+The following conclusions originate from **2026-06-19**; the current **upstream advisories have been rechecked** as of **2026-10-14** below, but the actual published Docker image digests **have not been freshly rescanned** as part of this documentation audit. Use recent Trivy output, upstream advisories, Alpine security notices, and the exact image digest under investigation before drawing deployment-specific conclusions.
 
 | CVE | 2026-06-19 assessment | Relevant component | Follow-up |
 |---|---|---|---|
 | [CVE-2025-15558](https://osv.dev/vulnerability/CVE-2025-15558) | Not affected on Linux; Windows-specific Docker CLI plugin lookup | `github.com/docker/cli` within the upstream `gh` binary | Historical assessment is encoded in [`openvex.json`](./openvex.json). Revalidate if upstream changes or a scanner disputes applicability. |
 | [CVE-2025-60876](https://security.alpinelinux.org/srcpkg/busybox) | Affected package; no upstream fix available **at that time** | Alpine BusyBox / `wget` | Check Alpine's **current** fix status and runtime reachability; do not assume the June determination remains current. |
+
+### Current upstream-advisory cross-check — 2026-10-14
+
+These are **source-advisory checks**, not a current scan of every published tag/digest, installed package, or runtime configuration.
+
+- **[CVE-2025-15558](https://github.com/docker/cli/security/advisories/GHSA-p436-gjf2-799p):** Docker's upstream advisory confirms that this Docker CLI plugin-discovery issue is **Windows-specific** and explicitly states that **non-Windows binaries are not impacted**. The project's Linux-only image is therefore **not affected by this particular Windows attack path**; the existing [OpenVEX statement](./openvex.json) records that assessment. This does **not** mean the upstream `gh` binary has no other vulnerabilities.
+- **[CVE-2025-60876](https://security.alpinelinux.org/vuln/CVE-2025-60876):** Alpine's public tracker currently marks `busybox 1.37.0-r31` in `3.24-main` as **possibly vulnerable**. Do **not** infer it was fixed by an `apk upgrade`, nor assert that every deployed image digest contains that exact package version. Check package inventory for the specific image digest and its latest scanner results when assessing exposure.
+
+The Alpine wording above is a tracker status, not an exploitability determination for this container. A change in upstream tracking or published image contents should trigger re-evaluation.
 
 The project cannot patch vulnerabilities in the prebuilt upstream `gh` binary in this repository without moving to a patched upstream release. OS package findings depend on Alpine's available fixes. Both require rechecking the actually published image rather than extrapolating from an old report.
 
